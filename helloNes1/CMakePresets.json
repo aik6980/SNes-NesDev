@@ -1,0 +1,30 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 20
+  },
+  "configurePresets": [
+    {
+      "name": "nes",
+      "displayName": "NES Build",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_ASM_COMPILER": "${sourceDir}/../cc65/bin/ca65.exe",
+        "CMAKE_ASM_FLAGS": "",
+        "CMAKE_ASM_LINKER": "${sourceDir}/../cc65/bin/cl65.exe",
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "nes",
+      "configurePreset": "nes",
+      "displayName": "Build NES ROM",
+      "description": "Assemble and link ROM",
+      "targets": [ "build_rom" ]
+    }
+  ]
+}
