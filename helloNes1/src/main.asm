@@ -14,7 +14,6 @@
 .segment "STARTUP"
 
 .segment "CHARS"
-  .org $0000
   .incbin "tiles.chr"
 
 .segment "RODATA"
@@ -24,7 +23,13 @@ palleteData:
 
 bgData:
   .incbin "bg.nam"
-bgDataSize = * - bgData
+
+.segment "ZEROPAGE"
+
+; 16 bit address Ptr
+PtrLo: .res 1 ;reserve 1 byte
+PtrHi: .res 1
+
 
 .segment "CODE"
 
@@ -48,7 +53,7 @@ bgDataSize = * - bgData
   lda palleteData, x
   sta $2007
   inx
-  cpx #32 ; 4(sets) * 4(colors) * 2(bytes) = 32 times
+  cpx #16 ; loop 16 bytes (1 sub palette)
   bne @LoadLoop
 
   rts
@@ -61,15 +66,27 @@ bgDataSize = * - bgData
   lda #$00
   sta $2006
 
-  ldx #0  ; loop 
-@LoadLoop:
-  lda bgData, x
-  sta $2007
-  inx
-  cpx #bgDataSize
-  bne @LoadLoop
+  ; init Ptr
+  lda #<bgData ; shift right
+  sta PtrLo
+  lda #>bgData
+  sta PtrHi
 
-  rts 
+  ; load 4 pages of 256 bytes
+  ldx #4
+@LoadLoop4:
+  ldy #0  ; loop
+@LoadLoop256:
+  lda (PtrLo),y
+  sta $2007
+  iny
+  bne @LoadLoop256
+
+  inc PtrHi ; advance pointer by 256
+  dex
+  bne @LoadLoop4
+
+  rts
 .endproc
 
 .proc reset
@@ -110,8 +127,12 @@ bgDataSize = * - bgData
   jsr LoadBackground
 main:
   jsr AppMain
-  lda #%00001000
+  lda #%00001010
   sta $2001
+
+  lda #0
+  sta $2005
+  sta $2005
 endlessLoop:
   jmp endlessLoop
 .endproc
