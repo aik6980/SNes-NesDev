@@ -42,18 +42,18 @@ Buttons: .res 1 ; we reserve one byte for storing the data that is read from con
   rti
 .endproc
 
-; todo: add comments
+; Update each entities (1 entity = 4 sprites) to show different color if Buttons are pressed
 .proc UpdateSprites
-  ldx #6
-  lda #%10000000
+  ldx #6            ; offset=6 to 1st entity - Byte 2 (Attributes)
+  lda #%10000000    ; button to check - use ror to loop until it reached 0
   sta $00
 @loop:
   lda Buttons
-  and $00
+  and $00           ; check if the button is pressed
   beq @not_pressed
 @pressed:
-  lda $0200, x
-  ora #%00000001
+  lda $0200, x      ; each entity contains 4 sprites, set each of them to SpritePalette 1
+  ora #%00000001    ; set bit 0 and 1 to SpritePalette 1, logical-or to keep the rest
   sta $0200, x
   lda $0204, x
   ora #%00000001
@@ -67,25 +67,28 @@ Buttons: .res 1 ; we reserve one byte for storing the data that is read from con
   jmp @done
 @not_pressed:
   lda $0200, x
-  and #%11111100
+  and #%11111100    ; clr bit 0 and 1 to SpritePalette 0, logical-and to keep the rest
   sta $0200, x
+
   lda $0204, x
   and #%11111100
   sta $0204, x
+  
   lda $0208, x
   and #%11111100
   sta $0208, x
+  
   lda $020C, x
   and #%11111100
   sta $020C, x
 @done:
-  txa
+  txa         ; increase the X by 16, by using A
   clc
   adc #$10
   tax
   clc
-  ror $00
-  bcc @loop
+  ror $00     ; shift right, prepare to test next button
+  bcc @loop   ; loop until Carry is set to 1
   rts
 .endproc
 
