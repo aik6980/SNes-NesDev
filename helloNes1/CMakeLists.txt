@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 project(hello ASM)
 
-set(ROM_NAME "hello.nes")
+set(ROM_NAME "hello")
 
 set(SOURCES
     src/main.asm
@@ -22,7 +22,7 @@ add_custom_command(
 # link
 add_custom_command(
     OUTPUT ${ROM_NAME}
-    COMMAND ${CMAKE_ASM_LINKER} -o ${ROM_NAME} -g -v -t nes main.o app.o
+    COMMAND ${CMAKE_ASM_LINKER} -o ${ROM_NAME}.nes -v -t nes main.o app.o --dbgfile ${ROM_NAME}.dbg -Ln ${ROM_NAME}.label.txt
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     DEPENDS main.o
     COMMENT "Assembling(2/2) NES ROM ..."

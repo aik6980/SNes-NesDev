@@ -1,13 +1,20 @@
 
 .export AppMain
-.segment "CODE"
 
 .proc AppMain
+    ; test constant
+    HEALTH = 25
+
     ; check for game over
-    lda #25 ; current heath
+    lda #HEALTH ; current heath
     sta $00 ; store 
     lda #30 ; damage amount
     sta $01 ; store
+    
+    lda #<-10 ; store -10
+    clc 
+    adc $01
+    
     lda #00 ; current game_over flag
     sta $02 ; store
 

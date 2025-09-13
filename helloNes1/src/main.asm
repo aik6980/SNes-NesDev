@@ -7,28 +7,143 @@
   .byte $01, $00            ; mapper 0, vertical mirroring
 
 .segment "VECTORS"
-  .addr nmi
-  .addr reset
-  .addr 0
+  .addr Nmi
+  .addr Reset
+  .addr 0 ; IRQ unused
 
 .segment "STARTUP"
 
+; Using macro directive to help creating a number of variables
+.macro Make_vars var_name, count
+  .repeat count, i
+    .ident(.sprintf("%s%d", var_name, i)): .res 1
+  .endrepeat
+.endmacro
+
 .segment "ZEROPAGE"
+Make_vars "Var_temp", 8
 
 ; 16 bit address Ptr
 PtrLo: .res 1 ;reserve 1 byte
 PtrHi: .res 1
 ; Controller
 Buttons: .res 1 ; we reserve one byte for storing the data that is read from controller
+; Game loop
+Render_flag: .res 1 ; a flag to help sync Game loop with Render loop
+
+; Player
+Var_player_xpos: .res 1
+Var_player_ypos: .res 1
+Var_player_facing: .res 1
+
+Var_player_sprite = $0200 + (4*10)
 
 
 .segment "CODE"
 
+.include "ppu.asm"
 .include "controller.asm"
+.include "game.asm"
 
-.proc nmi     ; game loop goes here
-  jsr ReadController
-  jsr UpdateDebugControllerSprites
+.proc Reset
+  sei
+  cld
+  ldx #%01000000
+  stx $4017
+  ldx #$ff
+  txs
+  ldx #0
+  stx $2000 ; disable nmi
+  stx $2001 ; disable rendering
+  stx $4010
+  bit $2002
+
+;@vblankWait1:
+;  bit $2002
+;  bpl @vblankWait1
+  VBlank_wait
+
+@clearMemory:
+  lda #$00
+  sta $0000, x
+  sta $0100, x
+  sta $0200, x
+  sta $0300, x
+  sta $0400, x
+  sta $0500, x
+  sta $0600, x
+  sta $0700, x
+  inx
+  bne @clearMemory
+
+;@vblankWait2:
+;  bit $2002
+;  bpl @vblankWait2
+  VBlank_wait
+
+  jsr LoadPalettes
+  jsr Load_sprites
+  jsr LoadBackground
+
+  lda #0
+  sta $2003 ; OAMADDR <= 0
+
+  lda #$02
+  sta $4014
+  
+  ;lda #%00001010 ; enable background/show first column
+  lda #%00011110 ; enable background/sprites/show first column
+  sta $2001
+
+  lda #0    ; reset scrolling x/y position
+  sta $2005
+  sta $2005
+
+  lda #%10000000 ; enable NMI, both BG/Sprite use CHR0
+  sta $2000
+;endlessLoop:
+;  jmp endlessLoop
+  jmp Main
+.endproc
+
+; --------------------------
+; Game loop functions
+.macro Set_render_flag
+  lda #%10000000 ; use bit 7 to control N bit through bit
+  ora Render_flag
+  sta Render_flag
+.endmacro
+
+.macro Unset_render_flag
+  lda #%01111111
+  and Render_flag
+  sta Render_flag
+.endmacro
+;--------------------------
+
+; Game app 
+.proc Main
+  ;jsr Init_game
+  jsr AppMain
+  jsr Init_player
+loop:
+  jsr Game_loop
+  Set_render_flag
+
+@wait_for_render:
+  bit Render_flag
+  bmi @wait_for_render
+  
+  jmp loop
+.endproc
+
+.proc Nmi
+  bit Render_flag ; if Game loop hasn't finished, then nothing to render
+  bpl @return
+  
+  ; Render loop
+  ;jsr ReadController ; <- move to Game loop
+  ;jsr UpdateDebugControllerSprites ; <- move to Game loop 
 
   ; https://www.nesdev.org/wiki/PPU_OAM
   ; activate OAM DMA at $2000, 256 times
@@ -39,17 +154,28 @@ Buttons: .res 1 ; we reserve one byte for storing the data that is read from con
   lda #0
   sta $2006
   sta $2006
+
+  Unset_render_flag
+@return:
   rti
+.endproc
+
+.proc Game_loop
+  jsr ReadController
+  jsr Update_player_position
+  jsr Update_player_sprite
+  jsr UpdateDebugControllerSprites
+  rts
 .endproc
 
 ; Update each entities (1 entity = 1 sprites) to show different color if Buttons are pressed
 .proc UpdateDebugControllerSprites
   ldx #4+2          ; offset=6 to 1st entity - Byte 2 (Attributes) 
   lda #%10000000    ; button to check - use ror to loop until it reached 0
-  sta $00
+  sta Var_temp0
 @loop:
   lda Buttons
-  and $00           ; check if the button is pressed
+  and Var_temp0     ; check if the button is pressed
   beq @not_pressed
 @pressed:
   lda $0200, x      ; each entity contains 1 sprite, set each of them to SpritePalette 1
@@ -66,7 +192,7 @@ Buttons: .res 1 ; we reserve one byte for storing the data that is read from con
   adc #4
   tax
   clc
-  ror $00     ; shift right, prepare to test next button
+  ror Var_temp0     ; shift right, prepare to test next button
   bcc @loop   ; loop until Carry is set to 1
   rts
 .endproc
@@ -90,7 +216,103 @@ Buttons: .res 1 ; we reserve one byte for storing the data that is read from con
   rts
 .endproc
 
-.proc LoadSprites
+PLAYER_FACE_RIGHT = $00
+PLAYER_FACE_LEFT  = $40
+PLAYER_SPEED = 2
+.proc Init_player
+  INIT_X = 128
+  INIT_Y = 150
+
+  NUM_SPRITES = 4
+
+  lda #INIT_X
+  sta Var_player_xpos
+  lda #INIT_Y
+  sta Var_player_ypos
+
+  lda #PLAYER_FACE_RIGHT
+  sta Var_player_facing
+
+  rts
+.endproc
+
+.proc Update_player_sprite
+  NUM_SPRITES = 4
+
+  lda #$FF
+  and Var_player_facing
+  bne @use_left_facing
+  ldy #0
+  jmp @update_sprite
+
+@use_left_facing:
+  ldy #16
+
+@update_sprite:
+  ldx #0
+@loop:
+  lda Var_player_xpos
+  clc
+  adc Player_walk + 0, y
+  sta Var_player_sprite + OAM_X, x
+
+  lda Var_player_ypos
+  clc
+  adc Player_walk + 1, y
+  sta Var_player_sprite + OAM_Y, x
+
+  lda Player_walk + 2, y
+  sta Var_player_sprite + OAM_TILE, x
+  lda Player_walk + 3, y
+  sta Var_player_sprite + OAM_ATTR, x
+
+  
+  txa
+  clc 
+  adc #4
+  tax
+
+  tya
+  clc 
+  adc #4
+  tay
+
+  cpx #NUM_SPRITES*4
+  bne @loop
+.endproc
+
+.proc Update_player_position
+  lda Buttons
+  and #BUTTON_LEFT
+  bne @move_left
+  lda Buttons
+  and #BUTTON_RIGHT
+  bne @move_right
+  rts
+
+@move_left:
+  lda Var_player_xpos
+  clc
+  adc #<-PLAYER_SPEED
+  sta Var_player_xpos
+
+  lda #PLAYER_FACE_LEFT
+  sta Var_player_facing
+
+  rts
+@move_right:
+  lda Var_player_xpos
+  clc
+  adc #PLAYER_SPEED
+  sta Var_player_xpos
+
+  lda #PLAYER_FACE_RIGHT
+  sta Var_player_facing
+
+  rts
+.endproc
+
+.proc Load_sprites
   ldx #0 
 @loop:
   lda spriteData, x
@@ -131,66 +353,6 @@ Buttons: .res 1 ; we reserve one byte for storing the data that is read from con
   rts
 .endproc
 
-.proc reset
-  sei
-  cld
-  ldx #%01000000
-  stx $4017
-  ldx #$ff
-  txs
-  ldx #0
-  stx $2000 ; disable nmi
-  stx $2001 ; disable rendering
-  stx $4010
-  bit $2002
-
-@vblankWait1:
-  bit $2002
-  bpl @vblankWait1
-
-@clearMemory:
-  lda #$00
-  sta $0000, x
-  sta $0100, x
-  sta $0200, x
-  sta $0300, x
-  sta $0400, x
-  sta $0500, x
-  sta $0600, x
-  sta $0700, x
-  inx
-  bne @clearMemory
-
-@vblankWait2:
-  bit $2002
-  bpl @vblankWait2
-
-  jsr LoadPalettes
-  jsr LoadSprites
-  jsr LoadBackground
-main:
-  jsr AppMain
-
-  lda #0
-  sta $2003 ; OAMADDR <= 0
-
-  lda #$02
-  sta $4014
-  
-  ;lda #%00001010 ; enable background/show first column
-  lda #%00011110 ; enable background/sprites/show first column
-  sta $2001
-
-  lda #0    ; reset scrolling x/y position
-  sta $2005
-  sta $2005
-
-  lda #%10000000 ; enable NMI, both BG/Sprite use CHR0
-  sta $2000
-endlessLoop:
-  jmp endlessLoop
-.endproc
-
 ; Data
 .segment "CHARS"
   ; Tile page $0000, 1K
@@ -209,6 +371,7 @@ spriteData:
 
   ; 256 bytes sprite data
   .incbin "debug_controller.oam"
+  .include "sprite_data.inc.asm"
 
 bgData:
   .incbin "bg.nam"

@@ -1,32 +1,24 @@
-session_NTSCData:
-	.byte 6
-	.byte 6
-
-session_Metasprite0_data:
-
-	.byte   48,   0,$21,0
-	.byte   40,   0,$22,0
-	.byte   24,   0,$53,0
-	.byte   32,   0,$33,0
-
-	.byte    8,<- 8,$3e,0
-	.byte    8,   0,$3f,0
-	.byte    0,   0,$1c,0
-	.byte   16,   0,$1e,0
-	.byte $80
-
-
-session_Player_data:
+Player_walk:
 
 	.byte <- 8,<- 8,$a8,0
 	.byte    0,<- 8,$a9,0
 	.byte <- 8,   0,$b8,0
 	.byte    0,   0,$b9,0
-	.byte $80
 
+	.byte    0,<- 8,$a8,$40
+	.byte <- 8,<- 8,$a9,$40
+	.byte    0,   0,$b8,$40
+	.byte <- 8,   0,$b9,$40
 
-session_pointers:
+Debug_controller:
+	.byte   176,  152,$21,0
+	.byte   168,  152,$22,0
+	.byte   152,  152,$53,0
+	.byte   160,  152,$33,0
 
-	.word session_Metasprite0_data
-	.word session_Player_data
+	.byte   136,  144,$3e,0
+	.byte   136,  152,$3f,0
+	.byte   128,  152,$1c,0
+	.byte   144,  152,$1e,0
+
 
