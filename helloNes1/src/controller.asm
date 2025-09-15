@@ -1,3 +1,5 @@
+.code
+
 ; https://www.nesdev.org/wiki/Standard_controller
 ; https://www.nesdev.org/wiki/Controller_reading_code
 

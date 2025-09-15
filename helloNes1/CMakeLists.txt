@@ -1,30 +1,34 @@
 cmake_minimum_required(VERSION 3.20)
-project(hello ASM)
+project(nesDemo ASM)
 
-set(ROM_NAME "hello")
+set(ROM_NAME "nesDemo")
 
 set(SOURCES
     src/main.asm
-    src/app.asm
 )
 
-# Build rules
-# compile asm
-add_custom_command(
-    OUTPUT main.o
-    COMMAND ${CMAKE_ASM_COMPILER} -g -v -o ${CMAKE_CURRENT_BINARY_DIR}/main.o ${CMAKE_CURRENT_SOURCE_DIR}/src/main.asm
-    COMMAND ${CMAKE_ASM_COMPILER} -g -v -o ${CMAKE_CURRENT_BINARY_DIR}/app.o ${CMAKE_CURRENT_SOURCE_DIR}/src/app.asm
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src
-    DEPENDS ${SOURCES}
-    COMMENT "Assembling(1/2) NES ROM ..."
-)
+set(OBJFILES "")
+
+# Compile asm
+foreach(SRC ${SOURCES})
+    get_filename_component(FILE_NAME ${SRC} NAME_WE) # name without extension
+    set(OBJ ${CMAKE_CURRENT_BINARY_DIR}/${FILE_NAME}.o)
+    list(APPEND OBJFILES ${OBJ})
+
+    add_custom_command(
+        OUTPUT ${OBJ}
+        COMMAND ${CMAKE_ASM_COMPILER} -g -v -o ${OBJ} ${CMAKE_CURRENT_SOURCE_DIR}/${SRC}
+        DEPENDS ${SRC}
+        COMMENT "Assembling ${SRC} -> ${OBJ}"
+    )
+endforeach()
 
 # link
 add_custom_command(
     OUTPUT ${ROM_NAME}
-    COMMAND ${CMAKE_ASM_LINKER} -o ${ROM_NAME}.nes -v -t nes main.o app.o --dbgfile ${ROM_NAME}.dbg -Ln ${ROM_NAME}.label.txt
+    COMMAND ${CMAKE_ASM_LINKER} -o ${ROM_NAME}.nes -v -t nes ${OBJFILES} --dbgfile ${ROM_NAME}.dbg -Ln ${ROM_NAME}.label.txt
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    DEPENDS main.o
+    DEPENDS ${OBJFILES}
     COMMENT "Assembling(2/2) NES ROM ..."
 )
 

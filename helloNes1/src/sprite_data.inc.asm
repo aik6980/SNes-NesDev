@@ -5,11 +5,6 @@ Player_walk:
 	.byte <- 8,   0,$b8,0
 	.byte    0,   0,$b9,0
 
-	.byte    0,<- 8,$a8,$40
-	.byte <- 8,<- 8,$a9,$40
-	.byte    0,   0,$b8,$40
-	.byte <- 8,   0,$b9,$40
-
 Debug_controller:
 	.byte   176,  152,$21,0
 	.byte   168,  152,$22,0

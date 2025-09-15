@@ -1,6 +1,7 @@
+.segment "ZEROPAGE"
+Var_test: .res 1
 
-.export AppMain
-
+.segment "CODE"
 .proc AppMain
     ; test constant
     HEALTH = 25

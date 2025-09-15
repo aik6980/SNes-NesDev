@@ -1,4 +1,8 @@
-.import AppMain
+.include "ppu.asm"
+.include "controller.asm"
+.include "app.asm"
+.include "game.asm"
+.include "player.asm"
 
 .segment "HEADER"
   .byte $4E, $45, $53, $1A  ; iNES header identifier
@@ -31,21 +35,10 @@ Buttons: .res 1 ; we reserve one byte for storing the data that is read from con
 ; Game loop
 Render_flag: .res 1 ; a flag to help sync Game loop with Render loop
 
-; Player
-Var_player_xpos: .res 1
-Var_player_ypos: .res 1
-Var_player_facing: .res 1
-
-Var_player_sprite = $0200 + (4*10)
-
 
 .segment "CODE"
 
-.include "ppu.asm"
-.include "controller.asm"
-.include "game.asm"
-
-.proc Reset
+.proc Reset 
   sei
   cld
   ldx #%01000000
@@ -216,102 +209,6 @@ loop:
   rts
 .endproc
 
-PLAYER_FACE_RIGHT = $00
-PLAYER_FACE_LEFT  = $40
-PLAYER_SPEED = 2
-.proc Init_player
-  INIT_X = 128
-  INIT_Y = 150
-
-  NUM_SPRITES = 4
-
-  lda #INIT_X
-  sta Var_player_xpos
-  lda #INIT_Y
-  sta Var_player_ypos
-
-  lda #PLAYER_FACE_RIGHT
-  sta Var_player_facing
-
-  rts
-.endproc
-
-.proc Update_player_sprite
-  NUM_SPRITES = 4
-
-  lda #$FF
-  and Var_player_facing
-  bne @use_left_facing
-  ldy #0
-  jmp @update_sprite
-
-@use_left_facing:
-  ldy #16
-
-@update_sprite:
-  ldx #0
-@loop:
-  lda Var_player_xpos
-  clc
-  adc Player_walk + 0, y
-  sta Var_player_sprite + OAM_X, x
-
-  lda Var_player_ypos
-  clc
-  adc Player_walk + 1, y
-  sta Var_player_sprite + OAM_Y, x
-
-  lda Player_walk + 2, y
-  sta Var_player_sprite + OAM_TILE, x
-  lda Player_walk + 3, y
-  sta Var_player_sprite + OAM_ATTR, x
-
-  
-  txa
-  clc 
-  adc #4
-  tax
-
-  tya
-  clc 
-  adc #4
-  tay
-
-  cpx #NUM_SPRITES*4
-  bne @loop
-.endproc
-
-.proc Update_player_position
-  lda Buttons
-  and #BUTTON_LEFT
-  bne @move_left
-  lda Buttons
-  and #BUTTON_RIGHT
-  bne @move_right
-  rts
-
-@move_left:
-  lda Var_player_xpos
-  clc
-  adc #<-PLAYER_SPEED
-  sta Var_player_xpos
-
-  lda #PLAYER_FACE_LEFT
-  sta Var_player_facing
-
-  rts
-@move_right:
-  lda Var_player_xpos
-  clc
-  adc #PLAYER_SPEED
-  sta Var_player_xpos
-
-  lda #PLAYER_FACE_RIGHT
-  sta Var_player_facing
-
-  rts
-.endproc
-
 .proc Load_sprites
   ldx #0 
 @loop:
@@ -374,6 +271,6 @@ spriteData:
   .include "sprite_data.inc.asm"
 
 bgData:
-  .incbin "bg.nam"
+  .incbin "bg.nam"  
 
 

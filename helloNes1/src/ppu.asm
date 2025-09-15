@@ -1,3 +1,5 @@
+.code
+
 ; NES Picture Processing Unit (PPU) Constants and Macros
 ; See: https://www.nesdev.org/wiki/PPU_registers
 
