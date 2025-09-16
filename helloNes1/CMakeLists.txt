@@ -8,16 +8,23 @@ set(SOURCES
 )
 
 set(OBJFILES "")
+set(DEPENDFILES "")
 
 # Compile asm
 foreach(SRC ${SOURCES})
     get_filename_component(FILE_NAME ${SRC} NAME_WE) # name without extension
+    
     set(OBJ ${CMAKE_CURRENT_BINARY_DIR}/${FILE_NAME}.o)
     list(APPEND OBJFILES ${OBJ})
+    
+    # using depfile to track dependencies
+    set(DEP ${CMAKE_CURRENT_BINARY_DIR}/${FILE_NAME}.d)
+    list(APPEND DEPENDFILES ${DEP})
 
     add_custom_command(
         OUTPUT ${OBJ}
-        COMMAND ${CMAKE_ASM_COMPILER} -g -v -o ${OBJ} ${CMAKE_CURRENT_SOURCE_DIR}/${SRC}
+        COMMAND ${CMAKE_ASM_COMPILER} -g -v --create-dep ${DEP} -o ${OBJ} ${CMAKE_CURRENT_SOURCE_DIR}/${SRC}
+        DEPFILE ${DEP}
         DEPENDS ${SRC}
         COMMENT "Assembling ${SRC} -> ${OBJ}"
     )
