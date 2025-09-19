@@ -5,6 +5,8 @@ Var_player_xpos: .res 1
 Var_player_ypos: .res 1
 Var_player_facing: .res 1
 
+Var_player_status: .res 1
+
 Var_player_sprite = $0200 + (4*10)
 
 .code ; shorthand for .segment "CODE"
