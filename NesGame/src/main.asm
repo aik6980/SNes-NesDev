@@ -34,7 +34,12 @@ PtrHi: .res 1
 Buttons: .res 1 ; we reserve one byte for storing the data that is read from controller
 ; Game loop
 Render_flag: .res 1 ; a flag to help sync Game loop with Render loop
+; Frame counter
+Var_frame_counter: .res 1
+Var_one_second_tick: .res 1
 
+.data
+Var_seconds: .res 1
 
 .segment "CODE"
 
@@ -130,19 +135,37 @@ loop:
   jmp loop
 .endproc
 
-.proc Nmi
-  bit Render_flag ; if Game loop hasn't finished, then nothing to render
-  bpl @return
-  
-  ; Render loop
-  ;jsr ReadController ; <- move to Game loop
-  ;jsr UpdateDebugControllerSprites ; <- move to Game loop 
-
+.macro Nmi_DMA_OAMSprite
   ; https://www.nesdev.org/wiki/PPU_OAM
   ; activate OAM DMA at $2000, 256 times
   lda #$02
   sta $4014
+.endmacro
 
+.proc Nmi
+  ; Counting Frame
+  inc Var_frame_counter
+  lda Var_frame_counter
+  cmp #60
+  bne :+
+  ; if Var_frame_counter > 60, inc 1 second reset frame counter
+  lda #0
+  sta Var_frame_counter
+  inc Var_seconds
+
+  inc Var_one_second_tick
+  :
+
+  ; if Game loop hasn't finished, then nothing to render
+  bit Render_flag 
+  bpl @return
+  
+  Nmi_DMA_OAMSprite
+
+  jsr Draw_text
+  jsr Draw_decimal
+
+  ; Reset scrolling pos
   bit $2002
   lda #0
   sta $2006
@@ -155,9 +178,29 @@ loop:
 
 .proc Game_loop
   jsr ReadController
+  
   jsr Update_player_position
+  jsr Update_player_status
+
   jsr Update_player_sprite
+  
+  jsr Print_text
+
+  ; update every one second tick
+  ldx Var_one_second_tick
+  cpx #0
+  beq :+
+    jsr Update_player_status_timer
+    dec Var_one_second_tick
+  : 
+  
+  ;lda Var_player_xpos
+  lda Var_player_status_timer
+  jsr Decimal_to_string
+  jsr Print_decimal
+
   jsr UpdateDebugControllerSprites
+
   rts
 .endproc
 

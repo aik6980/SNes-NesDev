@@ -14,30 +14,17 @@
         "CMAKE_ASM_COMPILER": "${sourceDir}/../../cc65/bin/ca65.exe",
         "CMAKE_ASM_FLAGS": "",
         "CMAKE_ASM_LINKER": "${sourceDir}/../../cc65/bin/ld65.exe",
-        "CMAKE_BUILD_TYPE": "Debug",
-        "EMULATOR": "${sourceDir}/../../Mesen_2.1.1_Windows/Mesen.exe" 
+        "CMAKE_BUILD_TYPE": "Debug"
       }
     }
   ],
   "buildPresets": [
     {
-      "name": "build",
+      "name": "nes",
       "configurePreset": "nes",
       "displayName": "Build NES ROM",
       "description": "Assemble and link ROM",
       "targets": [ "build_rom" ]
-    },
-
-    {
-      "name": "clean",
-      "configurePreset": "nes",
-      "targets": [ "clean_rom" ]
-    },
-    
-    {
-      "name": "run",
-      "configurePreset": "nes",
-      "targets": [ "run_emulator" ]
     }
   ]
 }

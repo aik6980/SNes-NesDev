@@ -42,31 +42,3 @@ add_custom_command(
 add_custom_target(build_rom ALL
     DEPENDS ${ROM_NAME}
 )
-
-# Post build
-# --- GLOB all related files: game.*
-file(GLOB ROM_ARTIFACTS "${CMAKE_CURRENT_BINARY_DIR}/${ROM_NAME}.*")
-
-set(OUTPUT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/bin)
-
-# Copy them to bin/
-add_custom_command(
-    TARGET build_rom POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${OUTPUT_DIR}
-    COMMAND ${CMAKE_COMMAND} -E copy ${ROM_ARTIFACTS} ${OUTPUT_DIR}/
-    COMMENT "Copying all ${ROM_NAME}.* files to bin/"
-)
-
-# Clean target
-add_custom_target(clean_rom
-    COMMAND ${CMAKE_COMMAND} -E echo "Cleaning ROM artifacts..."
-    COMMAND ${CMAKE_COMMAND} -E rm -f ${ROM_ARTIFACTS}
-    COMMENT "Remove ${ROM_NAME} build outputs"
-)
-
-# Run NEW rom
-add_custom_target(run_emulator
-    COMMAND ${EMULATOR} ${ROM_NAME}.nes
-    WORKING_DIRECTORY ${OUTPUT_DIR}
-    COMMENT "Running ROM in emulator"
-)
