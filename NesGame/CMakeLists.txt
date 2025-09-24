@@ -44,8 +44,12 @@ add_custom_target(build_rom ALL
 )
 
 # Post build
-# --- GLOB all related files: game.*
-file(GLOB ROM_ARTIFACTS "${CMAKE_CURRENT_BINARY_DIR}/${ROM_NAME}.*")
+# Copy artifacts to bin/   
+set(ROM_ARTIFACTS 
+    ${CMAKE_CURRENT_BINARY_DIR}/${ROM_NAME}.nes
+    ${CMAKE_CURRENT_BINARY_DIR}/${ROM_NAME}.dbg
+    ${CMAKE_CURRENT_BINARY_DIR}/${ROM_NAME}.label.txt   
+)
 
 set(OUTPUT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 
